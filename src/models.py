@@ -119,37 +119,46 @@ class ConfigurableMLP(nn.Module):
 
     def _init_weights(self) -> None:
         """
-        Apply activation-appropriate weight initialisation to all Linear layers.
+        Apply activation-appropriate weight initialisation to Linear layers.
 
-        ReLU → Kaiming Uniform (fan_in, nonlinearity='relu'):
-            Ensures the variance of activations is preserved across layers by
-            accounting for ReLU zeroing ~50% of neurons. PyTorch's nn.Linear
-            default is Kaiming Uniform, so this re-initialisation is a no-op
-            for ReLU models but makes the choice explicit and auditable.
+        Hidden layers:
+            ReLU    → Kaiming Uniform (fan_in, nonlinearity='relu'):
+                Accounts for ReLU zeroing ~50% of neurons.
+                Derived from He et al. (2015).
+            Sigmoid → Xavier Uniform:
+                Designed for symmetric saturating activations.
+                Scales by √(6 / (fan_in + fan_out)).
+                Derived from Glorot & Bengio (2010).
 
-        Sigmoid → Xavier Uniform:
-            Designed for symmetric activations. Scales weights by
-            √(6 / (fan_in + fan_out)) to preserve variance at
-            initialisation (before saturation sets in). Sigmoid models
-            still exhibit vanishing gradients at depth — this demonstrates
-            that initialisation alone cannot fully fix the problem.
-
-        Output layer → Xavier Uniform regardless of activation,
-            as it feeds into CrossEntropyLoss (no activation).
+        Output layer → Xavier Uniform (regardless of activation):
+            The output layer has no activation; it feeds raw logits into
+            CrossEntropyLoss. Xavier is appropriate for any linear output.
 
         Biases → zeros throughout.
         BatchNorm → γ=1, β=0 (identity at init, per original BN paper).
         """
+        # Separate hidden linears from the output linear
+        all_linears = [m for m in self.modules() if isinstance(m, nn.Linear)]
+        hidden_linears = all_linears[:-1]   # all except the last
+        output_linear  = all_linears[-1]    # the classification head
+
+        # Hidden layers: activation-specific init
+        for module in hidden_linears:
+            if self.activation_name == "ReLU":
+                nn.init.kaiming_uniform_(
+                    module.weight, mode="fan_in", nonlinearity="relu"
+                )
+            else:
+                nn.init.xavier_uniform_(module.weight)
+            nn.init.zeros_(module.bias)
+
+        # Output layer: always Xavier (feeds CrossEntropyLoss, no activation)
+        nn.init.xavier_uniform_(output_linear.weight)
+        nn.init.zeros_(output_linear.bias)
+
+        # BatchNorm: identity at initialisation
         for module in self.modules():
-            if isinstance(module, nn.Linear):
-                if self.activation_name == "ReLU":
-                    nn.init.kaiming_uniform_(
-                        module.weight, mode="fan_in", nonlinearity="relu"
-                    )
-                else:
-                    nn.init.xavier_uniform_(module.weight)
-                nn.init.zeros_(module.bias)
-            elif isinstance(module, nn.BatchNorm1d):
+            if isinstance(module, nn.BatchNorm1d):
                 nn.init.ones_(module.weight)    # γ = 1
                 nn.init.zeros_(module.bias)     # β = 0
 

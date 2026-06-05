@@ -31,6 +31,7 @@ import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.patches import Patch
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -272,7 +273,6 @@ def plot_test_accuracy_bar(
     y_max = min(1.01, agg["mean_acc"].max() + 0.10)
     ax.set_ylim(y_min, y_max)
 
-    from matplotlib.patches import Patch
     legend_handles = [
         Patch(color=_DEPTH_COLORS[d], label=f"{d}L ReLU") for d in [2, 4, 8]
     ] + [Patch(color=_ACTIVATION_COLORS["Sigmoid"], label="Sigmoid (all depths)")]
@@ -334,8 +334,6 @@ def plot_gradient_norm_by_layer(
 
         means = final[grad_cols].mean()
         stds  = final[grad_cols].std().fillna(0)
-        layer_indices = [int(c.split("_")[1]) + 1 for c in grad_cols]
-
         # Filter out None/NaN columns (from shallower models stored in same CSV)
         valid_mask = means.notna() & (means > 0)
         valid_cols = [c for c, v in zip(grad_cols, valid_mask) if v]
@@ -492,6 +490,15 @@ def plot_activation_heatmap(
     pivot_mean = agg.pivot(index="depth", columns="activation", values="mean_acc")
     pivot_std  = agg.pivot(index="depth", columns="activation", values="std_acc")
 
+    # Guard: require both activation columns for a meaningful heatmap
+    expected_activations = {"ReLU", "Sigmoid"}
+    present_activations  = set(pivot_mean.columns.tolist())
+    if present_activations != expected_activations:
+        missing = expected_activations - present_activations
+        print(
+            f"  [WARNING] Heatmap is incomplete — missing activation(s): {missing}.\n"
+            f"  Run Experiment 2 (Sigmoid) first to generate the full 3×2 heatmap."
+        )
     # Annotation: "X.XXX\n±Y.YYY"
     annot = pd.DataFrame(
         index=pivot_mean.index, columns=pivot_mean.columns, dtype=object
@@ -531,7 +538,6 @@ def plot_activation_heatmap(
 
 def plot_batchnorm_recovery(
     results_path: str,
-    summary_path: str,
     figures_dir: str,
 ) -> None:
     """
@@ -675,7 +681,7 @@ def generate_all_figures(
     plot_activation_heatmap(summary_path, figures_dir)
 
     print("\n[Fig 6] BatchNorm Recovery")
-    plot_batchnorm_recovery(results_path, summary_path, figures_dir)
+    plot_batchnorm_recovery(results_path, figures_dir)
 
     print("\n" + "═" * 60)
     print(f"All figures saved to: {figures_dir}")
