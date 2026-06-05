@@ -177,24 +177,23 @@ def get_dataloaders(
 # Run Identifier
 # ─────────────────────────────────────────────────────────────────────────────
 
-def make_run_id(depth: int, activation: str, batchnorm: bool, seed: int) -> str:
+def make_run_id(depth: int, activation: str, batchnorm: bool, seed: int, epochs: int) -> str:
     """
-    Build a deterministic, unique run identifier string.
+    Generate a deterministic unique identifier for a single run.
 
-    Format: d{depth}_{activation_lower}_bn{0|1}_s{seed}
-    Example: d8_sigmoid_bn1_s42
+    Format: d{depth}_{activation}_bn{0/1}_s{seed}_e{epochs}
+    Example: d8_relu_bn0_s42_e50
 
-    IMPORTANT — FAST_MODE / full-mode collision:
-        The run_id does NOT encode epoch count. If you run with FAST_MODE=True
-        (10 epochs), save results, then switch to FAST_MODE=False with
-        AUTO_RESUME=True, the full-mode runs will be skipped because the
-        fast-mode run_ids already exist in the CSV.
+    Why this matters:
+        If the user switches from FAST_MODE (10 epochs) to full mode (50 epochs) while
+        AUTO_RESUME=True, the full-mode runs would incorrectly be skipped if epochs were
+        not part of the run_id.
 
-        To switch modes safely:
-            1. Delete results/results.csv and results/summary.csv, OR
-            2. Set AUTO_RESUME=False to force re-training.
+    To switch modes safely:
+        1. Delete results/results.csv and results/summary.csv, OR
+        2. Set AUTO_RESUME=False to force re-training.
     """
-    return f"d{depth}_{activation.lower()}_bn{int(batchnorm)}_s{seed}"
+    return f"d{depth}_{activation.lower()}_bn{int(batchnorm)}_s{seed}_e{epochs}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

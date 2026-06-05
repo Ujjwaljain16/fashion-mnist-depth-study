@@ -421,7 +421,7 @@ class ExperimentRunner:
 
         Returns None if the run was skipped (AUTO_RESUME).
         """
-        run_id = make_run_id(depth, activation, use_batchnorm, seed)
+        run_id = make_run_id(depth, activation, use_batchnorm, seed, self.epochs)
 
         if self.auto_resume and run_exists(run_id, self.config["results_path"]):
             if self.verbose:
