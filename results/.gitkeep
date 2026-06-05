@@ -1,0 +1,5 @@
+# This directory is auto-populated by ExperimentRunner.
+# Results files created here:
+#   results.csv  — epoch-level training metrics (per run × per epoch)
+#   summary.csv  — per-run final metrics (test_acc, convergence_epoch, grad_ratio)
+#   figures/     — all PNG figure outputs from plots.py
