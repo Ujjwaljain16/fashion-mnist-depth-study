@@ -1,20 +1,25 @@
 # Fashion-MNIST: Shallow vs Deep Networks
 ### Submission Report
 
-**Course:** Deep Learning I  
-**Assignment:** Section 2 — Network Depth Experiments  
+**Course:** SST Neural Network & Intro to Computer Vision (ML III)  
+**Assignment:** Section 2 — 17 Shallow vs. Deep Networks  
 **Dataset:** Fashion-MNIST  
 **Framework:** PyTorch  
-**Date:** [Fill in submission date]  
-**Team:** [Fill in team members]  
+**Team:** Group 8  
+- Ujjwal Jain (10173)  
+- Pratham Onkar (10136)  
+- Aditya Kumar Rai (10178)  
+- Dhairya Motta (10202)  
+- Arman Barbhuiya (10196)  
+- Lakshay Jagga (10398)  
+- Piyush Kumar Gupta (10332)  
+- Iyad Farooq (10116)  
 
 ---
 
 ## Abstract
 
-> *(~150 words — fill in after experiments are complete)*
-
-This paper investigates the effect of network depth on classification performance and gradient dynamics in Multi-Layer Perceptrons (MLPs) trained on Fashion-MNIST. Three MLP architectures — 2, 4, and 8 hidden layers — are compared under a fixed parameter budget of approximately 500,000 parameters, with layer widths adjusted accordingly. We conduct three controlled experiments: a depth comparison under ReLU activation, an activation function study contrasting ReLU with Sigmoid, and a BatchNorm recovery experiment targeting the identified failure mode. All experiments use three random seeds; results are reported as mean ± standard deviation. Gradient norms per layer are logged to provide mechanistic insight into training dynamics beyond accuracy alone. [Add 2–3 sentences summarising key findings after running experiments.] The study demonstrates that the interaction between depth, activation function, and normalisation strategy is the primary determinant of whether a deep MLP is effectively trainable.
+This paper investigates the effect of network depth on classification performance and gradient dynamics in Multi-Layer Perceptrons (MLPs) trained on Fashion-MNIST. Three MLP architectures—2, 4, and 8 hidden layers—are evaluated under a fixed parameter budget of ~500,000 parameters. We find that under capacity control, non-saturating activations (ReLU) are effectively depth-invariant, achieving 88.7%–88.8% test accuracy across all depths. In contrast, saturating activations (Sigmoid) severely degrade with depth, dropping from 88.59% (2L) to 86.74% (8L). Gradient flow analysis reveals the mechanism: at initialization, Layer 1 gradients in the 8L Sigmoid model collapse to ~10⁻⁹, incurring a massive convergence penalty (12 epochs vs. 2–3 epochs for ReLU). While BatchNorm fully restores convergence speed by normalizing pre-activations, it cannot bypass the bounded derivative of the sigmoid function, leaving a residual accuracy gap. The study demonstrates that trainability, governed by activation choice and normalization, dominates theoretical depth advantages for MLPs on moderate-complexity datasets.
 
 ---
 
@@ -73,16 +78,15 @@ Input (784)
 
 | Depth | Width | Actual Parameters |
 |-------|-------|------------------|
-| 2L    | 413   | [Fill from notebook] |
-| 4L    | 296   | [Fill from notebook] |
-| 8L    | 215   | [Fill from notebook] |
-| 8L+BN | 215  | [Fill from notebook] |
+| 2L    | 413   | 499,327 |
+| 4L    | 296   | 499,066 |
+| 8L    | 215   | 496,015 |
+| 8L+BN | 215   | 499,455 |
 
 **Widths were adjusted so parameter count remains approximately constant across depths** (~500K). This ensures any observed performance differences are attributable to depth rather than parameter count.
 
 **Weight Initialisation:**
-- ReLU models: Kaiming Uniform (He et al., 2015) — accounts for ReLU's half-zeroing
-- Sigmoid models: Xavier Uniform (Glorot & Bengio, 2010) — designed for symmetric saturating activations
+- PyTorch default `nn.Linear` initialization (Kaiming uniform) is used across all models. While optimal for ReLU, Xavier uniform would be theoretically preferable for Sigmoid networks.
 
 **BatchNorm placement:** Linear → BatchNorm1d → Activation (original Ioffe & Szegedy placement).
 
@@ -99,11 +103,10 @@ Input (784)
 
 ### Experimental Controls
 
-- **Equal parameter budget:** widths scaled with depth
-- **Fixed random seeds:** 3 seeds for statistical reporting
-- **Identical training procedure:** Adam optimizer, same LR, epochs, batch size
-- **Identical data split:** fixed generator seed for val partition
-- **No early stopping:** all runs complete 50 epochs
+- **Equal parameter budget:** widths scaled with depth.
+- **Fixed random seeds:** 3 seeds for statistical reporting.
+- **Identical training procedure:** Adam optimizer, same LR, epochs, batch size.
+- **No early stopping:** all runs complete 50 epochs.
 
 ---
 
@@ -114,31 +117,21 @@ Input (784)
 **Purpose:** Answers RQ1.  
 **Models:** 2L, 4L, 8L — all ReLU, no BatchNorm.
 
-[Figure 1: Validation Accuracy vs Epoch — place here]  
-[Figure 2: Validation Loss vs Epoch — place here]  
-[Figure 3: Test Accuracy Bar Chart — place here]
+*Reference Figures in Notebook: Figure 1, Figure 2, Figure 3*
 
 **Results:**
 
-> *(Fill after experiments — paste from summary table)*
-
-| Model | Test Accuracy | Std | Convergence Epoch | Grad Ratio |
+| Model | Test Accuracy | Std | Convergence Epoch | Grad Ratio (Mean) |
 |-------|--------------|-----|------------------|------------|
-| 2L ReLU | | | | |
-| 4L ReLU | | | | |
-| 8L ReLU | | | | |
+| 2L ReLU | 0.8879 | 0.0033 | 1.3 | 1.95× |
+| 4L ReLU | 0.8879 | 0.0027 | 1.3 | 4.52× |
+| 8L ReLU | 0.8872 | 0.0022 | 2.3 | 10.54× |
 
 **Interpretation:**
 
-> *(Choose the applicable interpretation after observing results)*
+All three models achieve nearly identical test accuracy (88.72%–88.79%), suggesting that Fashion-MNIST's discriminative features are fully learnable by a shallow MLP at this parameter scale. Depth provides diminishing returns. The accuracy difference between 2L and 8L ReLU is 0.0007, which is smaller than the standard deviation, meaning the null hypothesis (depth does not affect performance in capacity-controlled ReLU networks) cannot be rejected.
 
-*If depth helps:* The [N]L model achieved the highest test accuracy ([X]% ± [Y]%), suggesting Fashion-MNIST contains sufficient complexity to benefit from hierarchical feature learning, even under equal parameter budgets.
-
-*If depth is neutral:* All three models achieve similar test accuracy ([range]%), suggesting that Fashion-MNIST's discriminative features are fully learnable by a shallow MLP at this parameter scale. Depth provides diminishing returns.
-
-*If depth hurts:* The 8L model underperforms (test acc = [X]% vs [Y]% for 2L), consistent with optimisation difficulties in deep networks even with ReLU, despite a well-initialised network.
-
-**Convergence Analysis:** The convergence epoch (first epoch reaching 95% of maximum val_acc) indicates [faster/similar/slower] convergence for deeper models. This [supports/contradicts] the hypothesis that additional layers provide faster hierarchical learning.
+**Convergence Analysis:** The convergence epoch (first epoch reaching 95% of maximum val_acc) indicates identically rapid convergence (1.3 to 2.3 epochs) across all depths. This contradicts the hypothesis that additional layers provide faster hierarchical learning on this dataset.
 
 ---
 
@@ -147,26 +140,18 @@ Input (784)
 **Purpose:** Answers RQ2 + RQ3.  
 **Models:** 2L, 4L, 8L × {ReLU, Sigmoid} — no BatchNorm.
 
-[Figure 4A: Gradient Norm vs Layer Depth — place here]  
-[Figure 4B: Gradient Norm vs Epoch (supplemental) — place here]  
-[Figure 5: Activation Heatmap — place here]
+*Reference Figures in Notebook: Figure 4A, Figure 4B, Figure 5*
 
-**Gradient Attenuation Results:**
-
-> *(Fill after experiments)*
-
-| Model | Gradient Attenuation Ratio |
-|-------|--------------------------|
-| 8L ReLU | |
-| 8L Sigmoid | |
+**Results (Test Accuracy):**
+- 2L Sigmoid: 0.8859 ± 0.0039
+- 4L Sigmoid: 0.8810 ± 0.0027
+- 8L Sigmoid: 0.8674 ± 0.0020
 
 **Interpretation:**
 
-Figure 4A shows gradient L2 norms plotted against layer index (1 = input side, 8 = output side) at the final training epoch.
+Unlike ReLU, Sigmoid performance degrades monotonically with depth. The 8L Sigmoid model underperforms 8L ReLU by 1.98 percentage points.
 
-*If Sigmoid shows decay:* The Sigmoid gradient norms decay from layer 8 toward layer 1 by a factor of approximately [X], while ReLU maintains [relatively stable/gently varying] norms across layers. This directly demonstrates vanishing gradients: early layers in the 8L Sigmoid network receive gradient signal [X]× weaker than the output-side layers, severely impeding their ability to learn. The gradient attenuation ratio of [X] (Sigmoid) vs [Y] (ReLU) quantifies this disparity.
-
-The theoretical expectation is σ'(x) ≤ 0.25 per layer → 0.25^8 ≈ 1.5×10⁻⁵ cumulative attenuation. The observed attenuation is [consistent with / less severe than] this bound because Adam's adaptive learning rate partially compensates for small gradients.
+Gradient flow provides the mechanistic explanation. Figure 4B (in notebook) shows that at epoch 1, Layer 1 gradients in the 8L Sigmoid model collapse to ~10⁻⁹. This represents a 9-order-of-magnitude deficit compared to ReLU, severely impeding early-layer learning. Consequently, 8L Sigmoid requires ~12 epochs to converge, whereas ReLU models converge in 2-3 epochs.
 
 ---
 
@@ -175,22 +160,20 @@ The theoretical expectation is σ'(x) ≤ 0.25 per layer → 0.25^8 ≈ 1.5×10�
 **Purpose:** Answers RQ4.  
 **Models:** 8L Sigmoid (no BN) vs 8L Sigmoid + BatchNorm.
 
-[Figure 6: BatchNorm Recovery — place here]
+*Reference Figures in Notebook: Figure 6*
 
 **Results:**
 
-> *(Fill after experiments)*
-
-| Model | Test Accuracy | Std | Convergence Epoch | Grad Ratio |
+| Model | Test Accuracy | Std | Convergence Epoch | Grad Ratio (Mean) |
 |-------|--------------|-----|------------------|------------|
-| 8L Sigmoid (no BN) | | | | |
-| 8L Sigmoid + BN   | | | | |
+| 8L Sigmoid (no BN) | 0.8674 | 0.0020 | 12.0 | 7.72× |
+| 8L Sigmoid + BN   | 0.8812 | 0.0017 | 2.3 | 11.06× |
 
 **Interpretation:**
 
-*If BN helps significantly:* BatchNorm recovers substantial accuracy from [X]% to [Y]%, closing [Z]% of the gap to the 8L ReLU baseline. The gradient attenuation ratio drops from [A] to [B], confirming that BatchNorm directly addresses the gradient flow problem. By normalising pre-activations to zero mean, BN keeps inputs to Sigmoid in its linear region (near 0, where σ'(x) is maximised at ~0.25), preventing cascading gradient decay.
+BatchNorm recovers substantial accuracy, improving from 86.74% to 88.12%. Crucially, it completely rescues convergence speed, reducing it from 12 epochs down to 2.3 epochs (matching ReLU speed). By normalising pre-activations to zero mean, BN keeps inputs to the Sigmoid function in its linear region (near 0, where σ'(x) is maximised at ~0.25), preventing cascading gradient decay at initialization. 
 
-*If BN helps partially:* BatchNorm improves accuracy from [X]% to [Y]% but does not fully close the gap to ReLU. This suggests that while BN mitigates gradient vanishing, Sigmoid's saturating nature and bounded derivative still impose a training disadvantage compared to ReLU at this depth.
+However, BN does not fully close the accuracy gap to the ReLU baseline (88.72%). This suggests that while BN mitigates the optimization difficulty, the Sigmoid function's bounded derivative still imposes an expressivity disadvantage compared to ReLU.
 
 ---
 
@@ -198,35 +181,31 @@ The theoretical expectation is σ'(x) ≤ 0.25 per layer → 0.25^8 ≈ 1.5×10�
 
 ### Core Insight 1: Depth vs. Trainability
 
-The results highlight a fundamental tension in deep learning: depth increases a network's theoretical *expressivity* (ability to represent complex functions) but simultaneously increases *optimisation difficulty* (harder to train via gradient descent). Whether depth helps or hurts in practice depends on:
-
-1. **Dataset complexity** — simple datasets may not require hierarchical representations
-2. **Activation function** — whether gradient flow is preserved across layers
-3. **Architectural mitigations** — normalisation strategies that stabilise gradient flow
+The results highlight a fundamental tension in deep learning: depth increases a network's theoretical expressivity but simultaneously increases optimization difficulty. Whether depth helps or hurts in practice depends on the activation function. ReLU safely decoupled depth from degradation, whereas Sigmoid models suffered compounded gradient attenuation.
 
 ### Core Insight 2: Gradient Norm as a Diagnostic Tool
 
-The gradient attenuation ratio (first_layer_grad / last_layer_grad) provides a mechanistic explanation for performance differences. A ratio >> 1 identifies networks where early layers are effectively frozen despite ongoing weight updates later in the network. This metric should be standard practice in deep network debugging.
+The gradient attenuation ratio provides a mechanistic explanation for performance differences. An initialization ratio approaching 10⁹ identifies networks where early layers are frozen. Gradient diagnostic plots should be standard practice for debugging deep networks.
 
-### Core Insight 3: BatchNorm's Mechanism
+### Core Insight 3: Overfitting Dynamics (Hidden Insight)
 
-BatchNorm does not directly add representational capacity (the weight overhead is minimal: 2W parameters per layer). Its benefit is entirely mechanistic: by normalising layer inputs, it keeps activations in the gradient-transmitting region of the activation function. This is particularly valuable for Sigmoid, which saturates and kills gradients at ±∞.
+Validation loss curves reveal that all ReLU models reach minimum loss around epochs 8–12 and then severely overfit (loss nearly doubles by epoch 50). Interestingly, the 8L ReLU model exhibits lower terminal validation loss than the shallower models, suggesting that deeper, narrower MLPs provide stronger implicit regularization under Adam.
 
 ---
 
 ## Threats to Validity
 
-### Threat 1: Task Simplicity
-Fashion-MNIST achieves 90%+ accuracy with even shallow MLPs. The dataset may be too simple for depth to provide meaningful benefits, making the depth-performance comparison less informative for harder, real-world tasks (e.g., CIFAR-10, ImageNet).
+### Threat 1: Early Stopping Absence
+Test accuracy is evaluated strictly at epoch 50, whereas peak validation accuracy occurs around epoch 10. Test accuracy underestimates optimal performance by ~1 percentage point uniformly across all configurations.
 
-### Threat 2: Width-Depth Confound
-Controlling for parameter count requires unequal widths across depths. Narrower networks may learn qualitatively different feature representations, introducing a confound: differences in performance may partially reflect the width change rather than the depth change.
+### Threat 2: Initialization Bias
+PyTorch's default Kaiming initialization (designed for ReLU) is used across all models. Xavier initialization would theoretically provide better starting conditions for Sigmoid networks, though it cannot circumvent the fundamental bounds of the sigmoid derivative across 8 layers.
 
-### Threat 3: Limited Statistical Power
-Three seeds provide a confidence interval but limited statistical power. A statistically significant difference between 2L and 4L models would require additional seeds and formal significance testing (e.g., Welch's t-test), which is outside this study's scope.
+### Threat 3: Task Simplicity
+Fashion-MNIST achieves ~88.8% accuracy with even shallow MLPs. The dataset may be too simple for depth to provide meaningful hierarchical benefits.
 
-### Threat 4: Scope Limitation
-Results apply only to fully-connected MLPs. CNNs have fundamentally different depth-performance relationships due to parameter sharing, local receptive fields, and built-in translational invariance. Conclusions should not be extrapolated to convolutional architectures.
+### Threat 4: Limited Statistical Power
+Three seeds provide a confidence interval but limited statistical power. A statistically significant difference between 2L and 4L models would require additional seeds and formal significance testing.
 
 ---
 
@@ -235,20 +214,16 @@ Results apply only to fully-connected MLPs. CNNs have fundamentally different de
 ### Direct Answers to Research Questions
 
 **RQ1: Does increasing depth improve performance under a fixed parameter budget?**
-
-[Fill after experiments: "Yes, modestly — the [N]L model outperformed the 2L baseline by [X]%, suggesting [explanation]." OR "No — all depths achieve similar accuracy (~[X]%), indicating that Fashion-MNIST complexity is within 2L MLP capacity at this parameter scale."]
+**No.** Under strict capacity control (~500k parameters), increasing depth provides zero performance benefit for Fashion-MNIST. ReLU accuracy remained static (88.79% at 2L vs 88.72% at 8L), while Sigmoid accuracy systematically degraded (88.59% at 2L vs 86.74% at 8L).
 
 **RQ2: How does depth affect gradient flow?**
-
-Depth amplifies gradient attenuation. Even with ReLU, deeper networks show [slightly/substantially] larger gradient attenuation ratios. With Sigmoid, 8 layers produce gradient signals at layer 1 that are [X]× weaker than at layer 8, making early-layer learning effectively impossible without architectural intervention.
+Depth introduces severe gradient attenuation for saturating activations. In 8L Sigmoid, gradients at the input layer collapsed to 10⁻⁹ at initialization. Non-saturating activations (ReLU) bypass this decay, preserving stable gradient flow regardless of depth.
 
 **RQ3: What role does activation choice play?**
-
-Activation choice is the single largest determinant of trainability in deep networks. ReLU's gradient-preserving property (f'(x) ∈ {0,1}) enables training at depth 8, while Sigmoid's bounded derivative (σ'(x) ≤ 0.25) causes exponential gradient decay, making the 8L Sigmoid model [dramatically underperform / fail to converge] compared to its ReLU counterpart.
+Activation choice is the single largest determinant of trainability in deep networks. ReLU's gradient-preserving property (f'(x) ∈ {0,1}) enables rapid training at depth 8, while Sigmoid's bounded derivative causes exponential gradient decay, significantly slowing convergence and lowering final accuracy.
 
 **RQ4: Can BatchNorm restore trainability?**
-
-[Fill after experiments: "Yes — 8L Sigmoid + BN achieves [X]% vs [Y]% without BN, recovering [Z]% of the accuracy gap to the ReLU baseline. Mechanistically, BatchNorm reduces the gradient attenuation ratio from [A] to [B], confirming that gradient flow is the bottleneck addressed." OR note if BN helps only partially.]
+**Partially.** Batch Normalization rescued the trainability of the 8L Sigmoid model (accelerating convergence from 12 epochs to 2-3 epochs), but the final accuracy (88.12%) remained structurally bottlenecked below the ReLU ceiling (88.72%).
 
 ### Final Summary
 
@@ -259,15 +234,9 @@ This study demonstrates that understanding *why* a model fails — through gradi
 ## References
 
 1. LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998). Gradient-based learning applied to document recognition. *Proceedings of the IEEE*.
-
 2. Glorot, X., & Bengio, Y. (2010). Understanding the difficulty of training deep feedforward neural networks. *AISTATS*.
-
 3. He, K., Zhang, X., Ren, S., & Sun, J. (2015). Delving deep into rectifiers: Surpassing human-level performance on ImageNet classification. *ICCV*.
-
 4. Ioffe, S., & Szegedy, C. (2015). Batch normalization: Accelerating deep network training by reducing internal covariate shift. *ICML*.
-
 5. Kingma, D. P., & Ba, J. (2014). Adam: A method for stochastic optimization. *ICLR*.
-
 6. Hochreiter, S. (1991). Untersuchungen zu dynamischen neuronalen Netzen. *Diploma thesis, TU Munich*.
-
 7. Xiao, H., Rasul, K., & Vollgraf, R. (2017). Fashion-MNIST: A novel image dataset for benchmarking machine learning algorithms. *arXiv:1708.07747*.
