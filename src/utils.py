@@ -15,8 +15,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader, random_split
-from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, random_split, TensorDataset
+from torchvision import datasets
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -140,23 +140,31 @@ def get_dataloaders(
     Returns:
         (train_loader, val_loader, test_loader)
     """
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((norm_mean,), (norm_std,)),
-    ])
-
+    # Download standard uint8 datasets
     os.makedirs(data_dir, exist_ok=True)
-    full_train = datasets.FashionMNIST(
-        data_dir, train=True, download=True, transform=transform
-    )
-    test_set = datasets.FashionMNIST(
-        data_dir, train=False, download=True, transform=transform
-    )
+    full_train = datasets.FashionMNIST(data_dir, train=True, download=True)
+    test_set = datasets.FashionMNIST(data_dir, train=False, download=True)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Vectorized Pre-processing (CRITICAL FOR COLAB T4 PERFORMANCE)
+    # Standard FashionMNIST.__getitem__ uses slow PIL Image conversion per item.
+    # We bypass this by vectorizing the entire dataset instantly into VRAM/RAM.
+    # ─────────────────────────────────────────────────────────────────────────
+    x_train = full_train.data.float().unsqueeze(1) / 255.0
+    x_train = (x_train - norm_mean) / norm_std
+    y_train = full_train.targets
+
+    x_test = test_set.data.float().unsqueeze(1) / 255.0
+    x_test = (x_test - norm_mean) / norm_std
+    y_test = test_set.targets
+
+    full_train_ds = TensorDataset(x_train, y_train)
+    test_dataset_vec = TensorDataset(x_test, y_test)
 
     # Reproducible split — generator is independent of the run seed
     generator = torch.Generator().manual_seed(seed)
     train_dataset, val_dataset = random_split(
-        full_train, [train_size, val_size], generator=generator
+        full_train_ds, [train_size, val_size], generator=generator
     )
 
     train_loader = DataLoader(
@@ -168,7 +176,7 @@ def get_dataloaders(
         num_workers=num_workers, drop_last=False, pin_memory=True
     )
     test_loader = DataLoader(
-        test_set, batch_size=batch_size, shuffle=False,
+        test_dataset_vec, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, drop_last=False, pin_memory=True
     )
     return train_loader, val_loader, test_loader
