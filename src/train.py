@@ -401,6 +401,25 @@ class ExperimentRunner:
         }
         append_summary_row(summary_row, self.config["summary_path"])
 
+    def _save_checkpoint(self, model: nn.Module, result: RunResult) -> None:
+        """Save a .pt checkpoint containing model weights, config, and metrics."""
+        chk_dir = Path(self.config["checkpoints_dir"])
+        chk_dir.mkdir(parents=True, exist_ok=True)
+        path = chk_dir / f"{result.run_id}.pt"
+        
+        checkpoint = {
+            "model_state_dict": model.state_dict(),
+            "config": self.config,
+            "run_id": result.run_id,
+            "seed": result.seed,
+            "metrics": {
+                "test_acc": result.test_acc,
+                "convergence_epoch": result.convergence_epoch,
+                "gradient_attenuation_ratio": result.gradient_attenuation_ratio
+            }
+        }
+        torch.save(checkpoint, path)
+
     def _run_single(
         self,
         depth: int,
@@ -463,6 +482,7 @@ class ExperimentRunner:
         result.seed   = seed
 
         self._save_results(result, depth, width, activation, use_batchnorm)
+        self._save_checkpoint(model, result)
 
         if self.verbose:
             print(

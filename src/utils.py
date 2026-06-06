@@ -60,6 +60,8 @@ CONFIG: dict[str, Any] = {
     "results_path":    "results/results.csv",
     "summary_path":    "results/summary.csv",
     "figures_dir":     "results/figures",
+    "checkpoints_dir": "results/checkpoints",
+    "exports_dir":     "results/exports",
 }
 
 # Number of gradient columns emitted per row (= max depth).
@@ -153,22 +155,21 @@ def get_dataloaders(
 
     # Reproducible split — generator is independent of the run seed
     generator = torch.Generator().manual_seed(seed)
-    train_set, val_set = random_split(
+    train_dataset, val_dataset = random_split(
         full_train, [train_size, val_size], generator=generator
     )
 
-    pin = torch.cuda.is_available()
     train_loader = DataLoader(
-        train_set, batch_size=batch_size, shuffle=True,
-        num_workers=num_workers, pin_memory=pin, drop_last=False,
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, drop_last=False, pin_memory=True
     )
     val_loader = DataLoader(
-        val_set, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=pin,
+        val_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=num_workers, drop_last=False, pin_memory=True
     )
     test_loader = DataLoader(
-        test_set, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=pin,
+        test_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=num_workers, drop_last=False, pin_memory=True
     )
     return train_loader, val_loader, test_loader
 
@@ -217,48 +218,29 @@ def run_exists(run_id: str, results_path: str) -> bool:
 
 
 def _safe_write_csv(df: pd.DataFrame, path: Path) -> None:
-    """Write DataFrame to CSV, creating parent directories if needed."""
+    """Write DataFrame to CSV using true append mode for fault tolerance."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, index=False)
+    write_header = not path.exists()
+    df.to_csv(path, mode='a', header=write_header, index=False)
 
 
 def append_epoch_rows(rows: list[dict[str, Any]], results_path: str) -> None:
     """
-    Append epoch-level rows to results CSV.
-
-    Uses pandas read + concat + write to handle column-heterogeneous rows
-    gracefully (e.g., 2L model has 2 grad columns; 8L model has 8).
-    NaN is used for gradient columns beyond a model's depth.
-
-    Performance note: At max ~2700 rows (54 runs × 50 epochs) the re-write
-    cost is negligible (< 1 MB). Simpler than DictWriter column management.
+    Append epoch-level rows to results CSV safely.
+    Uses pandas to_csv(mode='a') to ensure atomic, non-destructive appends.
     """
+    if not rows:
+        return
     p = Path(results_path)
     df_new = pd.DataFrame(rows)
-    if p.exists():
-        try:
-            df_existing = pd.read_csv(p)
-            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        except pd.errors.EmptyDataError:
-            df_combined = df_new
-    else:
-        df_combined = df_new
-    _safe_write_csv(df_combined, p)
+    _safe_write_csv(df_new, p)
 
 
 def append_summary_row(row: dict[str, Any], summary_path: str) -> None:
     """Append a single per-run summary row to summary CSV."""
     p = Path(summary_path)
     df_new = pd.DataFrame([row])
-    if p.exists():
-        try:
-            df_existing = pd.read_csv(p)
-            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        except pd.errors.EmptyDataError:
-            df_combined = df_new
-    else:
-        df_combined = df_new
-    _safe_write_csv(df_combined, p)
+    _safe_write_csv(df_new, p)
 
 
 def load_results(results_path: str) -> pd.DataFrame:
