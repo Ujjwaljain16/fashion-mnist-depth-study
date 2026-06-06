@@ -59,7 +59,6 @@ fashion-mnist-depth-study/
 │   └── report.md             ← Final Submission Report
 │
 ├── requirements.txt
-├── PHASE_3_VALIDATION_CHECKLIST.md
 └── README.md
 ```
 
