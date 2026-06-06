@@ -168,7 +168,7 @@ def get_dataloaders(
         num_workers=num_workers, drop_last=False, pin_memory=True
     )
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False,
+        test_set, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, drop_last=False, pin_memory=True
     )
     return train_loader, val_loader, test_loader
