@@ -1,8 +1,19 @@
 # Fashion-MNIST: Shallow vs Deep Networks
 
-> **Course:** Deep Learning I — Section 2 Project  
-> **Assignment:** Depth Study — 2L vs 4L vs 8L MLPs on Fashion-MNIST  
+> **Course:** SST Neural Network & Intro to Computer Vision (ML III)  
+> **Assignment:** Section 2 — 17 Shallow vs. Deep Networks  
+> **Dataset:** Fashion-MNIST  
 > **Framework:** PyTorch  
+
+**Team: Group 8**
+- Ujjwal Jain (10173)  
+- Pratham Onkar (10136)  
+- Aditya Kumar Rai (10178)  
+- Dhairya Motta (10202)  
+- Arman Barbhuiya (10196)  
+- Lakshay Jagga (10398)  
+- Piyush Kumar Gupta (10332)  
+- Iyad Farooq (10116)  
 
 ---
 
@@ -45,10 +56,7 @@ fashion-mnist-depth-study/
 │       └── fig6_batchnorm_recovery.png
 │
 ├── report/
-│   └── report.md             ← Submission report template
-│
-├── viva/
-│   └── viva_prep.md          ← 25 ranked Q&A
+│   └── report.md             ← Final Submission Report
 │
 ├── requirements.txt
 ├── PHASE_3_VALIDATION_CHECKLIST.md
@@ -63,7 +71,7 @@ fashion-mnist-depth-study/
 
 1. Upload the project zip to Google Drive (or clone to Colab storage):
    ```bash
-   !git clone https://github.com/YOUR_USERNAME/fashion-mnist-depth-study.git
+   !git clone https://github.com/Ujjwaljain16/fashion-mnist-depth-study.git
    %cd fashion-mnist-depth-study
    ```
 2. Open `notebooks/Fashion_MNIST_Depth_Study.ipynb` in Colab.
@@ -74,6 +82,7 @@ fashion-mnist-depth-study/
 
 ```bash
 # 1. Clone or unzip project
+git clone https://github.com/Ujjwaljain16/fashion-mnist-depth-study.git
 cd fashion-mnist-depth-study
 
 # 2. Create virtual environment
@@ -134,11 +143,12 @@ Widths are adjusted so all models have approximately the same number of paramete
 
 | Depth | Width | Actual Parameters |
 |-------|-------|------------------|
-| 2L    | 413   | ~499K            |
-| 4L    | 296   | ~499K            |
-| 8L    | 215   | ~496K            |
+| 2L    | 413   | 499,327          |
+| 4L    | 296   | 499,066          |
+| 8L    | 215   | 496,015          |
+| 8L+BN | 215   | 499,455          |
 
-Actual parameter counts are printed in the notebook at runtime.
+Actual parameter counts are logged automatically during training.
 
 ---
 
@@ -150,8 +160,7 @@ Actual parameter counts are printed in the notebook at runtime.
 | [`src/train.py`](src/train.py) | Training loop + experiment orchestration |
 | [`src/utils.py`](src/utils.py) | `CONFIG` dict (single source of truth) |
 | [`src/plots.py`](src/plots.py) | All figure generation functions |
-| [`report/report.md`](report/report.md) | Submission report template |
-| [`viva/viva_prep.md`](viva/viva_prep.md) | 25 ranked viva Q&A |
+| [`report/report.md`](report/report.md) | Final submission report with empirical data |
 
 ---
 
@@ -171,8 +180,7 @@ The train/validation split (54K/6K) uses a fixed generator seed of 42 across all
 
 ## Team Contributions
 
-| Name | Contribution |
-|------|-------------|
-| [Member 1] | [Fill in] |
-| [Member 2] | [Fill in] |
-| [Member 3] | [Fill in] |
+This project was a collaborative effort by all members of Group 8:
+Ujjwal Jain, Pratham Onkar, Aditya Kumar Rai, Dhairya Motta, Arman Barbhuiya, Lakshay Jagga, Piyush Kumar Gupta, and Iyad Farooq. 
+
+All members contributed equally to the experimental design, code implementation, execution, data analysis, and final report writing.
